@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -33,6 +34,7 @@ func main() {
 	fmt.Println("Reading from CSV...")
 	r := csv.NewReader(csvFile)
 	replacements := make(map[string]string)
+	var sortedOldURLs []string
 	presenceMap := make(map[string]int)
 
 	for {
@@ -45,8 +47,14 @@ func main() {
 			return
 		}
 		replacements[record[0]] = record[1]
+		sortedOldURLs = append(sortedOldURLs, record[0])
 		presenceMap[record[0]] = 0
 	}
+
+	// キーの長さでソート
+	sort.Slice(sortedOldURLs, func(i, j int) bool {
+		return len(sortedOldURLs[i]) > len(sortedOldURLs[j])
+	})
 
 	// XML入力ファイルを開く
 	fmt.Println("Opening XML input file...")
@@ -73,14 +81,12 @@ func main() {
 	fmt.Println("Processing XML file...")
 	for scanner.Scan() {
 		line := scanner.Text()
-		for oldURL := range replacements {
+		for _, oldURL := range sortedOldURLs {
 			if strings.Contains(line, oldURL) {
 				presenceMap[oldURL] = 1
 				count++
 			}
-		}
-		for oldURL, newURL := range replacements {
-			line = strings.ReplaceAll(line, oldURL, newURL)
+			line = strings.ReplaceAll(line, oldURL, replacements[oldURL])
 		}
 		writer.WriteString(line + "\n")
 	}
